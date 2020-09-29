@@ -147,8 +147,8 @@ void bioInit(void) {
      * 初始化 job 队列，以及线程状态
      */
     for (j = 0; j < REDIS_BIO_NUM_OPS; j++) {
-        pthread_mutex_init(&bio_mutex[j],NULL);
-        pthread_cond_init(&bio_condvar[j],NULL);
+        pthread_mutex_init(&bio_mutex[j], NULL);
+        pthread_cond_init(&bio_condvar[j], NULL);
         bio_jobs[j] = listCreate();
         bio_pending[j] = 0;
     }
@@ -158,7 +158,7 @@ void bioInit(void) {
      * 设置栈大小
      */
     pthread_attr_init(&attr);
-    pthread_attr_getstacksize(&attr,&stacksize);
+    pthread_attr_getstacksize(&attr, &stacksize);
     if (!stacksize) stacksize = 1; /* The world is full of Solaris Fixes */
     while (stacksize < REDIS_THREAD_STACK_SIZE) stacksize *= 2;
     pthread_attr_setstacksize(&attr, stacksize);
@@ -170,9 +170,9 @@ void bioInit(void) {
      * 创建线程
      */
     for (j = 0; j < REDIS_BIO_NUM_OPS; j++) {
-        void *arg = (void*)(unsigned long) j;
-        if (pthread_create(&thread,&attr,bioProcessBackgroundJobs,arg) != 0) {
-            redisLog(REDIS_WARNING,"Fatal: Can't initialize Background Jobs.");
+        void *arg = (void *) (unsigned long) j;
+        if (pthread_create(&thread, &attr, bioProcessBackgroundJobs, arg) != 0) {
+            redisLog(REDIS_WARNING, "Fatal: Can't initialize Background Jobs.");
             exit(1);
         }
         bio_threads[j] = thread;
@@ -193,7 +193,7 @@ void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3) {
     pthread_mutex_lock(&bio_mutex[type]);
 
     // 将新工作推入队列
-    listAddNodeTail(bio_jobs[type],job);
+    listAddNodeTail(bio_jobs[type], job);
     bio_pending[type]++;
 
     pthread_cond_signal(&bio_condvar[type]);
@@ -221,14 +221,14 @@ void *bioProcessBackgroundJobs(void *arg) {
     sigaddset(&sigset, SIGALRM);
     if (pthread_sigmask(SIG_BLOCK, &sigset, NULL))
         redisLog(REDIS_WARNING,
-            "Warning: can't mask SIGALRM in bio.c thread: %s", strerror(errno));
+                 "Warning: can't mask SIGALRM in bio.c thread: %s", strerror(errno));
 
-    while(1) {
+    while (1) {
         listNode *ln;
 
         /* The loop always starts with the lock hold. */
         if (listLength(bio_jobs[type]) == 0) {
-            pthread_cond_wait(&bio_condvar[type],&bio_mutex[type]);
+            pthread_cond_wait(&bio_condvar[type], &bio_mutex[type]);
             continue;
         }
 
@@ -246,10 +246,10 @@ void *bioProcessBackgroundJobs(void *arg) {
         /* Process the job accordingly to its type. */
         // 执行任务
         if (type == REDIS_BIO_CLOSE_FILE) {
-            close((long)job->arg1);
+            close((long) job->arg1);
 
         } else if (type == REDIS_BIO_AOF_FSYNC) {
-            aof_fsync((long)job->arg1);
+            aof_fsync((long) job->arg1);
 
         } else {
             redisPanic("Wrong job type in bioProcessBackgroundJobs().");
@@ -261,7 +261,7 @@ void *bioProcessBackgroundJobs(void *arg) {
          * jobs to process we'll block again in pthread_cond_wait(). */
         pthread_mutex_lock(&bio_mutex[type]);
         // 将执行完成的任务从队列中删除，并减少任务计数器
-        listDelNode(bio_jobs[type],ln);
+        listDelNode(bio_jobs[type], ln);
         bio_pending[type]--;
     }
 }
@@ -293,13 +293,13 @@ void bioKillThreads(void) {
 
     for (j = 0; j < REDIS_BIO_NUM_OPS; j++) {
         if (pthread_cancel(bio_threads[j]) == 0) {
-            if ((err = pthread_join(bio_threads[j],NULL)) != 0) {
+            if ((err = pthread_join(bio_threads[j], NULL)) != 0) {
                 redisLog(REDIS_WARNING,
-                    "Bio thread for job type #%d can be joined: %s",
-                        j, strerror(err));
+                         "Bio thread for job type #%d can be joined: %s",
+                         j, strerror(err));
             } else {
                 redisLog(REDIS_WARNING,
-                    "Bio thread for job type #%d terminated",j);
+                         "Bio thread for job type #%d terminated", j);
             }
         }
     }

@@ -54,7 +54,7 @@ void freeClientMultiState(redisClient *c) {
     // 遍历事务队列
     for (j = 0; j < c->mstate.count; j++) {
         int i;
-        multiCmd *mc = c->mstate.commands+j;
+        multiCmd *mc = c->mstate.commands + j;
 
         // 释放所有命令参数
         for (i = 0; i < mc->argc; i++)
@@ -78,16 +78,16 @@ void queueMultiCommand(redisClient *c) {
 
     // 为新数组元素分配空间
     c->mstate.commands = zrealloc(c->mstate.commands,
-            sizeof(multiCmd)*(c->mstate.count+1));
+                                  sizeof(multiCmd) * (c->mstate.count + 1));
 
     // 指向新元素
-    mc = c->mstate.commands+c->mstate.count;
+    mc = c->mstate.commands + c->mstate.count;
 
     // 设置事务的命令、命令参数数量，以及命令的参数
     mc->cmd = c->cmd;
     mc->argc = c->argc;
-    mc->argv = zmalloc(sizeof(robj*)*c->argc);
-    memcpy(mc->argv,c->argv,sizeof(robj*)*c->argc);
+    mc->argv = zmalloc(sizeof(robj *) * c->argc);
+    memcpy(mc->argv, c->argv, sizeof(robj *) * c->argc);
     for (j = 0; j < c->argc; j++)
         incrRefCount(mc->argv[j]);
 
@@ -102,7 +102,7 @@ void discardTransaction(redisClient *c) {
     initClientMultiState(c);
 
     // 屏蔽事务状态
-    c->flags &= ~(REDIS_MULTI|REDIS_DIRTY_CAS|REDIS_DIRTY_EXEC);;
+    c->flags &= ~(REDIS_MULTI | REDIS_DIRTY_CAS | REDIS_DIRTY_EXEC);;
 
     // 取消对所有键的监视
     unwatchAllKeys(c);
@@ -125,27 +125,27 @@ void multiCommand(redisClient *c) {
 
     // 不能在事务中嵌套事务
     if (c->flags & REDIS_MULTI) {
-        addReplyError(c,"MULTI calls can not be nested");
+        addReplyError(c, "MULTI calls can not be nested");
         return;
     }
 
     // 打开事务 FLAG
     c->flags |= REDIS_MULTI;
 
-    addReply(c,shared.ok);
+    addReply(c, shared.ok);
 }
 
 void discardCommand(redisClient *c) {
 
     // 不能在客户端未进行事务状态之前使用
     if (!(c->flags & REDIS_MULTI)) {
-        addReplyError(c,"DISCARD without MULTI");
+        addReplyError(c, "DISCARD without MULTI");
         return;
     }
 
     discardTransaction(c);
 
-    addReply(c,shared.ok);
+    addReply(c, shared.ok);
 }
 
 /* Send a MULTI command to all the slaves and AOF file. Check the execCommand
@@ -154,10 +154,10 @@ void discardCommand(redisClient *c) {
  * 向所有附属节点和 AOF 文件传播 MULTI 命令。
  */
 void execCommandPropagateMulti(redisClient *c) {
-    robj *multistring = createStringObject("MULTI",5);
+    robj *multistring = createStringObject("MULTI", 5);
 
-    propagate(server.multiCommand,c->db->id,&multistring,1,
-              REDIS_PROPAGATE_AOF|REDIS_PROPAGATE_REPL);
+    propagate(server.multiCommand, c->db->id, &multistring, 1,
+              REDIS_PROPAGATE_AOF | REDIS_PROPAGATE_REPL);
 
     decrRefCount(multistring);
 }
@@ -171,7 +171,7 @@ void execCommand(redisClient *c) {
 
     // 客户端没有执行事务
     if (!(c->flags & REDIS_MULTI)) {
-        addReplyError(c,"EXEC without MULTI");
+        addReplyError(c, "EXEC without MULTI");
         return;
     }
 
@@ -193,10 +193,10 @@ void execCommand(redisClient *c) {
      * 第一种情况返回多个批量回复的空对象
      * 而第二种情况则返回一个 EXECABORT 错误
      */
-    if (c->flags & (REDIS_DIRTY_CAS|REDIS_DIRTY_EXEC)) {
+    if (c->flags & (REDIS_DIRTY_CAS | REDIS_DIRTY_EXEC)) {
 
         addReply(c, c->flags & REDIS_DIRTY_EXEC ? shared.execaborterr :
-                                                  shared.nullmultibulk);
+                    shared.nullmultibulk);
 
         // 取消事务
         discardTransaction(c);
@@ -214,7 +214,7 @@ void execCommand(redisClient *c) {
     orig_argc = c->argc;
     orig_cmd = c->cmd;
 
-    addReplyMultiBulkLen(c,c->mstate.count);
+    addReplyMultiBulkLen(c, c->mstate.count);
 
     // 执行事务中的命令
     for (j = 0; j < c->mstate.count; j++) {
@@ -245,7 +245,7 @@ void execCommand(redisClient *c) {
         }
 
         // 执行命令
-        call(c,REDIS_CALL_FULL);
+        call(c, REDIS_CALL_FULL);
 
         /* Commands may alter argc/argv, restore mstate. */
         // 因为执行后命令、命令参数可能会被改变
@@ -270,14 +270,14 @@ void execCommand(redisClient *c) {
     // 将服务器设为脏，确保 EXEC 命令也会被传播
     if (must_propagate) server.dirty++;
 
-handle_monitor:
+    handle_monitor:
     /* Send EXEC to clients waiting data from MONITOR. We do it here
      * since the natural order of commands execution is actually:
      * MUTLI, EXEC, ... commands inside transaction ...
      * Instead EXEC is flagged as REDIS_CMD_SKIP_MONITOR in the command
      * table, and we do it here with correct ordering. */
     if (listLength(server.monitors) && !server.loading)
-        replicationFeedMonitors(c,server.monitors,c->db->id,c->argv,c->argc);
+        replicationFeedMonitors(c, server.monitors, c->db->id, c->argv, c->argc);
 }
 
 /* ===================== WATCH (CAS alike for MULTI/EXEC) ===================
@@ -330,10 +330,10 @@ void watchForKey(redisClient *c, robj *key) {
     /* Check if we are already watching for this key */
     // 检查 key 是否已经保存在 watched_keys 链表中，
     // 如果是的话，直接返回
-    listRewind(c->watched_keys,&li);
-    while((ln = listNext(&li))) {
+    listRewind(c->watched_keys, &li);
+    while ((ln = listNext(&li))) {
         wk = listNodeValue(ln);
-        if (wk->db == c->db && equalStringObjects(key,wk->key))
+        if (wk->db == c->db && equalStringObjects(key, wk->key))
             return; /* Key already watched */
     }
 
@@ -354,17 +354,17 @@ void watchForKey(redisClient *c, robj *key) {
 
     /* This key is not already watched in this DB. Let's add it */
     // 检查 key 是否存在于数据库的 watched_keys 字典中
-    clients = dictFetchValue(c->db->watched_keys,key);
+    clients = dictFetchValue(c->db->watched_keys, key);
     // 如果不存在的话，添加它
-    if (!clients) { 
+    if (!clients) {
         // 值为链表
         clients = listCreate();
         // 关联键值对到字典
-        dictAdd(c->db->watched_keys,key,clients);
+        dictAdd(c->db->watched_keys, key, clients);
         incrRefCount(key);
     }
     // 将客户端添加到链表的末尾
-    listAddNodeTail(clients,c);
+    listAddNodeTail(clients, c);
 
     /* Add the new key to the list of keys watched by this client */
     // 将新 watchedKey 结构添加到客户端 watched_keys 链表的表尾
@@ -392,7 +392,7 @@ void watchForKey(redisClient *c, robj *key) {
     wk->key = key;
     wk->db = c->db;
     incrRefCount(key);
-    listAddNodeTail(c->watched_keys,wk);
+    listAddNodeTail(c->watched_keys, wk);
 }
 
 /* Unwatch all the keys watched by this client. To clean the EXEC dirty
@@ -410,8 +410,8 @@ void unwatchAllKeys(redisClient *c) {
     if (listLength(c->watched_keys) == 0) return;
 
     // 遍历链表中所有被客户端监视的键
-    listRewind(c->watched_keys,&li);
-    while((ln = listNext(&li))) {
+    listRewind(c->watched_keys, &li);
+    while ((ln = listNext(&li))) {
         list *clients;
         watchedKey *wk;
 
@@ -422,9 +422,9 @@ void unwatchAllKeys(redisClient *c) {
         wk = listNodeValue(ln);
         // 取出客户端链表
         clients = dictFetchValue(wk->db->watched_keys, wk->key);
-        redisAssertWithInfo(c,NULL,clients != NULL);
+        redisAssertWithInfo(c, NULL, clients != NULL);
         // 删除链表中的客户端节点
-        listDelNode(clients,listSearchKey(clients,c));
+        listDelNode(clients, listSearchKey(clients, c));
 
         /* Kill the entry at all if this was the only client */
         // 如果链表已经被清空，那么删除这个键
@@ -433,7 +433,7 @@ void unwatchAllKeys(redisClient *c) {
 
         /* Remove this watched key from the client->watched list */
         // 从链表中移除 key 节点
-        listDelNode(c->watched_keys,ln);
+        listDelNode(c->watched_keys, ln);
 
         decrRefCount(wk->key);
         zfree(wk);
@@ -461,8 +461,8 @@ void touchWatchedKey(redisDb *db, robj *key) {
     /* Mark all the clients watching this key as REDIS_DIRTY_CAS */
     /* Check if we are already watching for this key */
     // 遍历所有客户端，打开他们的 REDIS_DIRTY_CAS 标识
-    listRewind(clients,&li);
-    while((ln = listNext(&li))) {
+    listRewind(clients, &li);
+    while ((ln = listNext(&li))) {
         redisClient *c = listNodeValue(ln);
 
         c->flags |= REDIS_DIRTY_CAS;
@@ -492,14 +492,14 @@ void touchWatchedKeysOnFlush(int dbid) {
 
     /* For every client, check all the waited keys */
     // 遍历所有客户端
-    listRewind(server.clients,&li1);
-    while((ln = listNext(&li1))) {
+    listRewind(server.clients, &li1);
+    while ((ln = listNext(&li1))) {
 
         redisClient *c = listNodeValue(ln);
 
         // 遍历客户端监视的键
-        listRewind(c->watched_keys,&li2);
-        while((ln = listNext(&li2))) {
+        listRewind(c->watched_keys, &li2);
+        while ((ln = listNext(&li2))) {
 
             // 取出监视的键和键的数据库
             watchedKey *wk = listNodeValue(ln);
@@ -522,24 +522,24 @@ void watchCommand(redisClient *c) {
 
     // 不能在事务开始后执行
     if (c->flags & REDIS_MULTI) {
-        addReplyError(c,"WATCH inside MULTI is not allowed");
+        addReplyError(c, "WATCH inside MULTI is not allowed");
         return;
     }
 
     // 监视输入的任意个键
     for (j = 1; j < c->argc; j++)
-        watchForKey(c,c->argv[j]);
+        watchForKey(c, c->argv[j]);
 
-    addReply(c,shared.ok);
+    addReply(c, shared.ok);
 }
 
 void unwatchCommand(redisClient *c) {
 
     // 取消客户端对所有键的监视
     unwatchAllKeys(c);
-    
+
     // 重置状态
     c->flags &= (~REDIS_DIRTY_CAS);
 
-    addReply(c,shared.ok);
+    addReply(c, shared.ok);
 }

@@ -130,23 +130,41 @@
 #define REDIS_RDB_OPCODE_EOF        255
 
 int rdbSaveType(rio *rdb, unsigned char type);
+
 int rdbLoadType(rio *rdb);
+
 int rdbSaveTime(rio *rdb, time_t t);
+
 time_t rdbLoadTime(rio *rdb);
+
 int rdbSaveLen(rio *rdb, uint32_t len);
+
 uint32_t rdbLoadLen(rio *rdb, int *isencoded);
+
 int rdbSaveObjectType(rio *rdb, robj *o);
+
 int rdbLoadObjectType(rio *rdb);
+
 int rdbLoad(char *filename);
+
 int rdbSaveBackground(char *filename);
+
 void rdbRemoveTempFile(pid_t childpid);
+
 int rdbSave(char *filename);
+
 int rdbSaveObject(rio *rdb, robj *o);
+
 off_t rdbSavedObjectLen(robj *o);
+
 off_t rdbSavedObjectPages(robj *o);
+
 robj *rdbLoadObject(int type, rio *rdb);
+
 void backgroundSaveDoneHandler(int exitcode, int bysignal);
+
 int rdbSaveKeyValuePair(rio *rdb, robj *key, robj *val, long long expiretime, long long now);
+
 robj *rdbLoadStringObject(rio *rdb);
 
 #endif

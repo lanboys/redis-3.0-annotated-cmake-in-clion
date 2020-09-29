@@ -62,7 +62,7 @@
  * 哈希表节点
  */
 typedef struct dictEntry {
-    
+
     // 键
     void *key;
 
@@ -98,7 +98,7 @@ typedef struct dictType {
 
     // 销毁键的函数
     void (*keyDestructor)(void *privdata, void *key);
-    
+
     // 销毁值的函数
     void (*valDestructor)(void *privdata, void *obj);
 
@@ -113,13 +113,13 @@ typedef struct dictType {
  * 每个字典都使用两个哈希表，从而实现渐进式 rehash 。
  */
 typedef struct dictht {
-    
+
     // 哈希表数组
     dictEntry **table;
 
     // 哈希表大小
     unsigned long size;
-    
+
     // 哈希表大小掩码，用于计算索引值
     // 总是等于 size - 1
     unsigned long sizemask;
@@ -166,7 +166,7 @@ typedef struct dict {
  * 而不对字典进行修改。
  */
 typedef struct dictIterator {
-        
+
     // 被迭代的字典
     dict *d;
 
@@ -253,33 +253,61 @@ typedef void (dictScanFunction)(void *privdata, const dictEntry *de);
 
 /* API */
 dict *dictCreate(dictType *type, void *privDataPtr);
+
 int dictExpand(dict *d, unsigned long size);
+
 int dictAdd(dict *d, void *key, void *val);
+
 dictEntry *dictAddRaw(dict *d, void *key);
+
 int dictReplace(dict *d, void *key, void *val);
+
 dictEntry *dictReplaceRaw(dict *d, void *key);
+
 int dictDelete(dict *d, const void *key);
+
 int dictDeleteNoFree(dict *d, const void *key);
+
 void dictRelease(dict *d);
-dictEntry * dictFind(dict *d, const void *key);
+
+dictEntry *dictFind(dict *d, const void *key);
+
 void *dictFetchValue(dict *d, const void *key);
+
 int dictResize(dict *d);
+
 dictIterator *dictGetIterator(dict *d);
+
 dictIterator *dictGetSafeIterator(dict *d);
+
 dictEntry *dictNext(dictIterator *iter);
+
 void dictReleaseIterator(dictIterator *iter);
+
 dictEntry *dictGetRandomKey(dict *d);
+
 int dictGetRandomKeys(dict *d, dictEntry **des, int count);
+
 void dictPrintStats(dict *d);
+
 unsigned int dictGenHashFunction(const void *key, int len);
+
 unsigned int dictGenCaseHashFunction(const unsigned char *buf, int len);
-void dictEmpty(dict *d, void(callback)(void*));
+
+void dictEmpty(dict *d, void(callback)(void *));
+
 void dictEnableResize(void);
+
 void dictDisableResize(void);
+
 int dictRehash(dict *d, int n);
+
 int dictRehashMilliseconds(dict *d, int ms);
+
 void dictSetHashFunctionSeed(unsigned int initval);
+
 unsigned int dictGetHashFunctionSeed(void);
+
 unsigned long dictScan(dict *d, unsigned long v, dictScanFunction *fn, void *privdata);
 
 /* Hash table types */

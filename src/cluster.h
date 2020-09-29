@@ -150,7 +150,7 @@ struct clusterNode {
     // 位的值为 1 表示槽正由本节点处理，值为 0 则表示槽并非本节点处理
     // 比如 slots[0] 的第一个位保存了槽 0 的保存情况
     // slots[0] 的第二个位保存了槽 1 的保存情况，以此类推
-    unsigned char slots[REDIS_CLUSTER_SLOTS/8]; /* slots handled by this node */
+    unsigned char slots[REDIS_CLUSTER_SLOTS / 8]; /* slots handled by this node */
 
     // 该节点负责处理的槽数量
     int numslots;   /* Number of slots handled by this node */
@@ -394,7 +394,7 @@ typedef struct {
     char nodename[REDIS_CLUSTER_NAMELEN]; /* Name of the slots owner. */
 
     // 节点的槽布局
-    unsigned char slots[REDIS_CLUSTER_SLOTS/8]; /* Slots bitmap. */
+    unsigned char slots[REDIS_CLUSTER_SLOTS / 8]; /* Slots bitmap. */
 
 } clusterMsgDataUpdate;
 
@@ -456,7 +456,7 @@ typedef struct {
     char sender[REDIS_CLUSTER_NAMELEN]; /* Name of the sender node */
 
     // 消息发送者目前的槽指派信息
-    unsigned char myslots[REDIS_CLUSTER_SLOTS/8];
+    unsigned char myslots[REDIS_CLUSTER_SLOTS / 8];
 
     // 如果消息发送者是一个从节点，那么这里记录的是消息发送者正在复制的主节点的名字
     // 如果消息发送者是一个主节点，那么这里记录的是 REDIS_NODE_NULL_NAME
@@ -491,6 +491,8 @@ typedef struct {
                                             master is up. */
 
 /* ---------------------- API exported outside cluster.c -------------------- */
-clusterNode *getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **argv, int argc, int *hashslot, int *ask);
+clusterNode *
+getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **argv, int argc, int *hashslot,
+               int *ask);
 
 #endif /* __REDIS_CLUSTER_H */

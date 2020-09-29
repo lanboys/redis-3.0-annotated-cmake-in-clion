@@ -70,31 +70,30 @@ slowlogEntry *slowlogCreateEntry(robj **argv, int argc, long long duration) {
     se->argc = slargc;
 
     // 遍历并记录命令的参数
-    se->argv = zmalloc(sizeof(robj*)*slargc);
+    se->argv = zmalloc(sizeof(robj *) * slargc);
     for (j = 0; j < slargc; j++) {
         /* Logging too many arguments is a useless memory waste, so we stop
          * at SLOWLOG_ENTRY_MAX_ARGC, but use the last argument to specify
          * how many remaining arguments there were in the original command. */
         // 当参数的数量超过服务器允许的最大参数数量时，
         // 用最后一个参数记录省略提示
-        if (slargc != argc && j == slargc-1) {
+        if (slargc != argc && j == slargc - 1) {
             se->argv[j] = createObject(REDIS_STRING,
-                sdscatprintf(sdsempty(),"... (%d more arguments)",
-                argc-slargc+1));
+                                       sdscatprintf(sdsempty(), "... (%d more arguments)",
+                                                    argc - slargc + 1));
         } else {
             /* Trim too long strings as well... */
             // 如果参数太长，那么进行截断
             if (argv[j]->type == REDIS_STRING &&
                 sdsEncodedObject(argv[j]) &&
-                sdslen(argv[j]->ptr) > SLOWLOG_ENTRY_MAX_STRING)
-            {
+                sdslen(argv[j]->ptr) > SLOWLOG_ENTRY_MAX_STRING) {
                 sds s = sdsnewlen(argv[j]->ptr, SLOWLOG_ENTRY_MAX_STRING);
 
-                s = sdscatprintf(s,"... (%lu more bytes)",
-                    (unsigned long)
-                    sdslen(argv[j]->ptr) - SLOWLOG_ENTRY_MAX_STRING);
+                s = sdscatprintf(s, "... (%lu more bytes)",
+                                 (unsigned long)
+                                         sdslen(argv[j]->ptr) - SLOWLOG_ENTRY_MAX_STRING);
 
-                se->argv[j] = createObject(REDIS_STRING,s);
+                se->argv[j] = createObject(REDIS_STRING, s);
             } else {
                 se->argv[j] = argv[j];
                 incrRefCount(argv[j]);
@@ -154,7 +153,7 @@ void slowlogInit(void) {
     server.slowlog_entry_id = 0;
 
     // 日志链表的释构函数
-    listSetFreeMethod(server.slowlog,slowlogFreeEntry);
+    listSetFreeMethod(server.slowlog, slowlogFreeEntry);
 }
 
 /* Push a new entry into the slow log.
@@ -175,12 +174,12 @@ void slowlogPushEntryIfNeeded(robj **argv, int argc, long long duration) {
     // 如果执行时间超过服务器设置的上限，那么将命令添加到慢查询日志
     if (duration >= server.slowlog_log_slower_than)
         // 新日志添加到链表表头
-        listAddNodeHead(server.slowlog,slowlogCreateEntry(argv,argc,duration));
+        listAddNodeHead(server.slowlog, slowlogCreateEntry(argv, argc, duration));
 
     /* Remove old entries if needed. */
     // 如果日志数量过多，那么进行删除
     while (listLength(server.slowlog) > server.slowlog_max_len)
-        listDelNode(server.slowlog,listLast(server.slowlog));
+        listDelNode(server.slowlog, listLast(server.slowlog));
 }
 
 /* Remove all the entries from the current slow log. 
@@ -189,7 +188,7 @@ void slowlogPushEntryIfNeeded(robj **argv, int argc, long long duration) {
  */
 void slowlogReset(void) {
     while (listLength(server.slowlog) > 0)
-        listDelNode(server.slowlog,listLast(server.slowlog));
+        listDelNode(server.slowlog, listLast(server.slowlog));
 }
 
 /* The SLOWLOG command. Implements all the subcommands needed to handle the
@@ -200,18 +199,17 @@ void slowlogReset(void) {
 void slowlogCommand(redisClient *c) {
 
     // 重置
-    if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"reset")) {
+    if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr, "reset")) {
         slowlogReset();
-        addReply(c,shared.ok);
+        addReply(c, shared.ok);
 
-    // 返回长度
-    } else if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"len")) {
-        addReplyLongLong(c,listLength(server.slowlog));
+        // 返回长度
+    } else if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr, "len")) {
+        addReplyLongLong(c, listLength(server.slowlog));
 
-    // 获取某条或者全部日志
+        // 获取某条或者全部日志
     } else if ((c->argc == 2 || c->argc == 3) &&
-               !strcasecmp(c->argv[1]->ptr,"get"))
-    {
+               !strcasecmp(c->argv[1]->ptr, "get")) {
         long count = 10, sent = 0;
         listIter li;
         void *totentries;
@@ -219,28 +217,28 @@ void slowlogCommand(redisClient *c) {
         slowlogEntry *se;
 
         if (c->argc == 3 &&
-            getLongFromObjectOrReply(c,c->argv[2],&count,NULL) != REDIS_OK)
+            getLongFromObjectOrReply(c, c->argv[2], &count, NULL) != REDIS_OK)
             return;
 
         // 遍历日志，取出指定数量的日志
-        listRewind(server.slowlog,&li);
+        listRewind(server.slowlog, &li);
         totentries = addDeferredMultiBulkLength(c);
-        while(count-- && (ln = listNext(&li))) {
+        while (count-- && (ln = listNext(&li))) {
             int j;
 
             se = ln->value;
-            addReplyMultiBulkLen(c,4);
-            addReplyLongLong(c,se->id);
-            addReplyLongLong(c,se->time);
-            addReplyLongLong(c,se->duration);
-            addReplyMultiBulkLen(c,se->argc);
+            addReplyMultiBulkLen(c, 4);
+            addReplyLongLong(c, se->id);
+            addReplyLongLong(c, se->time);
+            addReplyLongLong(c, se->duration);
+            addReplyMultiBulkLen(c, se->argc);
             for (j = 0; j < se->argc; j++)
-                addReplyBulk(c,se->argv[j]);
+                addReplyBulk(c, se->argv[j]);
             sent++;
         }
-        setDeferredMultiBulkLength(c,totentries,sent);
+        setDeferredMultiBulkLength(c, totentries, sent);
     } else {
         addReplyError(c,
-            "Unknown SLOWLOG subcommand or wrong # of args. Try GET, RESET, LEN.");
+                      "Unknown SLOWLOG subcommand or wrong # of args. Try GET, RESET, LEN.");
     }
 }

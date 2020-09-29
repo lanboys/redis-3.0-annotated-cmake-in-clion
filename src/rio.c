@@ -82,7 +82,7 @@
 static size_t rioBufferWrite(rio *r, const void *buf, size_t len) {
 
     // 追加
-    r->io.buffer.ptr = sdscatlen(r->io.buffer.ptr,(char*)buf,len);
+    r->io.buffer.ptr = sdscatlen(r->io.buffer.ptr, (char *) buf, len);
 
     // 更新偏移量
     r->io.buffer.pos += len;
@@ -99,11 +99,11 @@ static size_t rioBufferWrite(rio *r, const void *buf, size_t len) {
 static size_t rioBufferRead(rio *r, void *buf, size_t len) {
 
     // r 中的内容的长度不足 len 
-    if (sdslen(r->io.buffer.ptr)-r->io.buffer.pos < len)
+    if (sdslen(r->io.buffer.ptr) - r->io.buffer.pos < len)
         return 0; /* not enough buffer to return len bytes. */
-    
+
     // 复制 r 中的内容到 buf
-    memcpy(buf,r->io.buffer.ptr+r->io.buffer.pos,len);
+    memcpy(buf, r->io.buffer.ptr + r->io.buffer.pos, len);
     r->io.buffer.pos += len;
 
     return 1;
@@ -126,13 +126,12 @@ static off_t rioBufferTell(rio *r) {
 static size_t rioFileWrite(rio *r, const void *buf, size_t len) {
     size_t retval;
 
-    retval = fwrite(buf,len,1,r->io.file.fp);
+    retval = fwrite(buf, len, 1, r->io.file.fp);
     r->io.file.buffered += len;
 
     // 检查写入的字节数，看是否需要执行自动 sync
     if (r->io.file.autosync &&
-        r->io.file.buffered >= r->io.file.autosync)
-    {
+        r->io.file.buffered >= r->io.file.autosync) {
         fflush(r->io.file.fp);
         aof_fsync(fileno(r->io.file.fp));
         r->io.file.buffered = 0;
@@ -148,7 +147,7 @@ static size_t rioFileWrite(rio *r, const void *buf, size_t len) {
  * 返回值为读取的字节数。
  */
 static size_t rioFileRead(rio *r, void *buf, size_t len) {
-    return fread(buf,len,1,r->io.file.fp);
+    return fread(buf, len, 1, r->io.file.fp);
 }
 
 /* Returns read/write position in file. 
@@ -163,34 +162,34 @@ static off_t rioFileTell(rio *r) {
  * 流为内存时所使用的结构
  */
 static const rio rioBufferIO = {
-    // 读函数
-    rioBufferRead,
-    // 写函数
-    rioBufferWrite,
-    // 偏移量函数
-    rioBufferTell,
-    NULL,           /* update_checksum */
-    0,              /* current checksum */
-    0,              /* bytes read or written */
-    0,              /* read/write chunk size */
-    { { NULL, 0 } } /* union for io-specific vars */
+        // 读函数
+        rioBufferRead,
+        // 写函数
+        rioBufferWrite,
+        // 偏移量函数
+        rioBufferTell,
+        NULL,           /* update_checksum */
+        0,              /* current checksum */
+        0,              /* bytes read or written */
+        0,              /* read/write chunk size */
+        {{NULL, 0}} /* union for io-specific vars */
 };
 
 /*
  * 流为文件时所使用的结构
  */
 static const rio rioFileIO = {
-    // 读函数
-    rioFileRead,
-    // 写函数
-    rioFileWrite,
-    // 偏移量函数
-    rioFileTell,
-    NULL,           /* update_checksum */
-    0,              /* current checksum */
-    0,              /* bytes read or written */
-    0,              /* read/write chunk size */
-    { { NULL, 0 } } /* union for io-specific vars */
+        // 读函数
+        rioFileRead,
+        // 写函数
+        rioFileWrite,
+        // 偏移量函数
+        rioFileTell,
+        NULL,           /* update_checksum */
+        0,              /* current checksum */
+        0,              /* bytes read or written */
+        0,              /* read/write chunk size */
+        {{NULL, 0}} /* union for io-specific vars */
 };
 
 /*
@@ -218,7 +217,7 @@ void rioInitWithBuffer(rio *r, sds s) {
  * 通用校验和计算函数
  */
 void rioGenericUpdateChecksum(rio *r, const void *buf, size_t len) {
-    r->cksum = crc64(r->cksum,buf,len);
+    r->cksum = crc64(r->cksum, buf, len);
 }
 
 /* Set the file-based rio object to auto-fsync every 'bytes' file written.
@@ -265,12 +264,12 @@ size_t rioWriteBulkCount(rio *r, char prefix, int count) {
     // cbuf = prefix ++ count ++ '\r\n'
     // 例如： *123\r\n
     cbuf[0] = prefix;
-    clen = 1+ll2string(cbuf+1,sizeof(cbuf)-1,count);
+    clen = 1 + ll2string(cbuf + 1, sizeof(cbuf) - 1, count);
     cbuf[clen++] = '\r';
     cbuf[clen++] = '\n';
 
     // 写入
-    if (rioWrite(r,cbuf,clen) == 0) return 0;
+    if (rioWrite(r, cbuf, clen) == 0) return 0;
 
     // 返回写入字节数
     return clen;
@@ -286,16 +285,16 @@ size_t rioWriteBulkString(rio *r, const char *buf, size_t len) {
     size_t nwritten;
 
     // 写入 $<count>\r\n
-    if ((nwritten = rioWriteBulkCount(r,'$',len)) == 0) return 0;
+    if ((nwritten = rioWriteBulkCount(r, '$', len)) == 0) return 0;
 
     // 写入 <payload>
-    if (len > 0 && rioWrite(r,buf,len) == 0) return 0;
+    if (len > 0 && rioWrite(r, buf, len) == 0) return 0;
 
     // 写入 \r\n
-    if (rioWrite(r,"\r\n",2) == 0) return 0;
+    if (rioWrite(r, "\r\n", 2) == 0) return 0;
 
     // 返回写入总量
-    return nwritten+len+2;
+    return nwritten + len + 2;
 }
 
 /* Write a long long value in format: "$<count>\r\n<payload>\r\n". 
@@ -308,10 +307,10 @@ size_t rioWriteBulkLongLong(rio *r, long long l) {
 
     // 取出 long long 值的字符串形式
     // 并计算该字符串的长度
-    llen = ll2string(lbuf,sizeof(lbuf),l);
+    llen = ll2string(lbuf, sizeof(lbuf), l);
 
     // 写入 $llen\r\nlbuf\r\n
-    return rioWriteBulkString(r,lbuf,llen);
+    return rioWriteBulkString(r, lbuf, llen);
 }
 
 /* Write a double value in the format: "$<count>\r\n<payload>\r\n" 
@@ -324,8 +323,8 @@ size_t rioWriteBulkDouble(rio *r, double d) {
 
     // 取出 double 值的字符串表示（小数点后只保留 17 位）
     // 并计算字符串的长度
-    dlen = snprintf(dbuf,sizeof(dbuf),"%.17g",d);
+    dlen = snprintf(dbuf, sizeof(dbuf), "%.17g", d);
 
     // 写入 $dlen\r\ndbuf\r\n
-    return rioWriteBulkString(r,dbuf,dlen);
+    return rioWriteBulkString(r, dbuf, dlen);
 }
